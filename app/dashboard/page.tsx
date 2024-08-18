@@ -4,12 +4,39 @@ import NavBar from "@/components/NavBar";
 import Image from "next/image";
 import Webcam from "react-webcam";
 import { useRef, useState } from "react";
+import * as tf from '@tensorflow/tfjs';
+import * as poseDetection from '@tensorflow-models/pose-detection';
+import backend from '@tensorflow/tfjs-backend-webgl'
+
+
+let intervalid;
+
 
 export default function Dashboard() {
+
     const [isStartPoseBtnClicked, setIsStartPoseBtnClicked] = useState(false);
 
     const webcamRef = useRef(null);
     const canvasRef = useRef(null);
+
+    const init = async () => {
+        await tf.setBackend('webgl');
+        await tf.ready();
+        const detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet);
+        intervalid = setInterval(() => {
+            detectPoses(detector);
+        }, 1000);
+    }
+
+    init();
+
+    const detectPoses = async (detector: poseDetection.PoseDetector) => {
+        if (isStartPoseBtnClicked) {
+            const video = webcamRef.current.video;
+            const poses = await detector.estimatePoses(video);
+            console.log(poses)
+        }
+    };
 
     const handleStartPoseBtnClick = () => {
         setIsStartPoseBtnClicked(!isStartPoseBtnClicked)
@@ -19,56 +46,56 @@ export default function Dashboard() {
 
     return (
         <main className="">
-        <NavBar />
-        <div className="h-[76px] w-full"/> {/* space for navbar */}
-        {/* main area */}
-        <div className="mx-auto sm:px-10 px-5 py-10">
-            <div className="flex flex-col md:flex-row gap-2 max-w-7xl w-full justify-center mx-auto">
-                {/* left-side */}
-                <div className="basis-3/5">
-                    {(!isStartPoseBtnClicked) ?
-                        // display before camera is on
-                        // hide this and replace with camera after the button click
-                        <PositionDetails />
-                        :
-                        // part with camera and canvas
-                        <div className="w-full">
-                            <div className="overflow-hidden relative w-full mb-4 flex justify-center items-center text-6xl text-slate-900">
-                                <div className="ghost-div w-[50vw] invisible aspect-video"/> {/* to fix heights */}
-                                <Webcam ref={webcamRef} className="absolute top-0 w-[50vw] aspect-video rounded-lg"/>
-                                <canvas ref={canvasRef} className="absolute top-0 w-[50vw] aspect-video" />
+            <NavBar />
+            <div className="h-[76px] w-full" /> {/* space for navbar */}
+            {/* main area */}
+            <div className="mx-auto sm:px-10 px-5 py-10">
+                <div className="flex flex-col md:flex-row gap-2 max-w-7xl w-full justify-center mx-auto">
+                    {/* left-side */}
+                    <div className="basis-3/5">
+                        {(!isStartPoseBtnClicked) ?
+                            // display before camera is on
+                            // hide this and replace with camera after the button click
+                            <PositionDetails />
+                            :
+                            // part with camera and canvas
+                            <div className="w-full">
+                                <div className="overflow-hidden relative w-full mb-4 flex justify-center items-center text-6xl text-slate-900">
+                                    <div className="ghost-div w-[50vw] invisible aspect-video" /> {/* to fix heights */}
+                                    <Webcam ref={webcamRef} className="absolute top-0 w-[50vw] aspect-video rounded-lg" />
+                                    <canvas ref={canvasRef} className="absolute top-0 w-[50vw] aspect-video" />
+                                </div>
                             </div>
+                        }
+                        {/* button for switching */}
+                        <div className="flex justify-center">
+                            <button className="border border-slate-500 shadow-md shadow-slate-200 hover:shadow-md hover:shadow-slate-300 hover:bg-slate-100 transition-all delay-50 px-6 py-1 rounded-md" onClick={handleStartPoseBtnClick}>
+                                {(!isStartPoseBtnClicked) ? "Start Pose" : "Back"}
+                            </button>
                         </div>
-                    }
-                    {/* button for switching */}
-                    <div className="flex justify-center">
-                        <button className="border border-slate-500 shadow-md shadow-slate-200 hover:shadow-md hover:shadow-slate-300 hover:bg-slate-100 transition-all delay-50 px-6 py-1 rounded-md" onClick={handleStartPoseBtnClick}>
-                            {(!isStartPoseBtnClicked) ? "Start Pose" : "Back"}
-                        </button>
                     </div>
-                </div>
-                {/* right-side */}
-                <div className="basis-2/5">
-                    <div className="rounded-lg overflow-hidden w-full border border-slate-200 shadow-lg p-4">
-                        <div className="w-full flex items-center">
-                            <Image
-                                src="/images/poses/tree_pos.jpg"
-                                alt="Tree Pose"
-                                layout="responsive"
-                                width={100}
-                                height={100}
-                            />
+                    {/* right-side */}
+                    <div className="basis-2/5">
+                        <div className="rounded-lg overflow-hidden w-full border border-slate-200 shadow-lg p-4">
+                            <div className="w-full flex items-center">
+                                <Image
+                                    src="/images/poses/tree_pos.jpg"
+                                    alt="Tree Pose"
+                                    layout="responsive"
+                                    width={100}
+                                    height={100}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
         </main>
     );
 }
 
 // show details of the selected pose
-export function PositionDetails(){
+export function PositionDetails() {
     return (
         <div className="mx-10 px-10 py-10">
             <h3 className="font-bold text-xl mb-2">
